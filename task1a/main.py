@@ -4,8 +4,8 @@ from sklearn.model_selection import KFold
 import numpy
 import pandas as pd
 
-TRAIN_FILE = "task1a/train.csv"
-SAMPLE_FILE = "task1a/sample.csv"
+TRAIN_FILE = "train.csv"
+SAMPLE_FILE = "sample.csv"
 
 # Import data from csv
 dataframe = pd.read_csv(TRAIN_FILE)
