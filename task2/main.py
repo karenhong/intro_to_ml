@@ -47,22 +47,22 @@ test_x_data = TEST.loc[:, 'x1':'x16'].values
 k = 10
 kf = KFold(n_splits=k)
 
-names = ["Nearest Neighbors", "Linear SVM", "RBF SVM", "Gaussian Process",
+names = ["LinearSVC", "Nearest Neighbors", "Linear SVM", "RBF SVM", "Gaussian Process",
          "Decision Tree", "Random Forest", "Neural Net", "AdaBoost",
          "Naive Bayes", "QDA", "OneVsOne", "OneVsRest"]
-models = [LinearSVC(random_state=0)]
-# models =  [KNeighborsClassifier(3),
-#     SVC(kernel="linear", C=0.025),
-#     SVC(gamma=2, C=1),
-#     GaussianProcessClassifier(1.0 * RBF(1.0)),
-#     DecisionTreeClassifier(max_depth=5),
-#     RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
-#     MLPClassifier(alpha=1),
-#     AdaBoostClassifier(),
-#     GaussianNB(),
-#     QuadraticDiscriminantAnalysis(),
-#     OneVsOneClassifier(LinearSVC(random_state=0)), 
-#     OneVsRestClassifier(LinearSVC(random_state=0))]
+models = [LinearSVC(random_state=0),
+    KNeighborsClassifier(3),
+    SVC(kernel="linear", C=0.025),
+    SVC(gamma=2, C=1),
+    GaussianProcessClassifier(1.0 * RBF(1.0)),
+    DecisionTreeClassifier(max_depth=5),
+    RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
+    MLPClassifier(alpha=1),
+    AdaBoostClassifier(),
+    GaussianNB(),
+    QuadraticDiscriminantAnalysis(),
+    OneVsOneClassifier(LinearSVC(random_state=0)), 
+    OneVsRestClassifier(LinearSVC(random_state=0))]
 
 model_accuracy = {} #accuracy:(name,model)
 
@@ -104,4 +104,4 @@ test_predict = max_accuracy_model[1].predict(test_x_data)
 result = pd.DataFrame({'Id':test_id,'y':test_predict})
 # # result['y'] = result['y'].astype(np.float64)
 # # print (result.dtypes)
-# result.to_csv(SAMPLE_FILE, index=False)
+result.to_csv(SAMPLE_FILE, index=False)
