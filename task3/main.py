@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 from keras.layers import Dense, Dropout, Activation
 from keras.models import Sequential
 from keras.utils import np_utils
+from sklearn.decomposition import PCA
 
 import pandas as pd
 import numpy as np
@@ -26,6 +27,11 @@ test_x_data = TEST.loc[:, 'x1':'x100'].values
 
 ############################################################
 
+# Feature Pre-processing
+pca = PCA()
+x_data = pca.fit_transform(x_data)
+test_x_data = pca.transform(test_x_data)
+
 model = Sequential([
     Dense(32, input_shape=(100,)),
     Activation('relu'),
@@ -38,7 +44,8 @@ model.compile(loss='categorical_crossentropy',
               optimizer='adam',
               metrics=['accuracy'])
 
-model.fit(x_data, dummy_y, epochs=200, verbose=1)
+
+model.fit(x_data, dummy_y, epochs=250, verbose=1)
 
 prediction = model.predict(test_x_data)
 
