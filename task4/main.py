@@ -3,7 +3,8 @@ from __future__ import absolute_import, division, print_function
 from keras.layers import Dense, Dropout, Activation
 from keras.models import Sequential
 from keras.utils import np_utils
-from sklearn.decomposition import PCA
+from sklearn import preprocessing
+from sklearn import utils
 
 import pandas as pd
 import numpy as np
@@ -12,35 +13,39 @@ import itertools as it
 ############################################################
 
 num_output_values = 10
+epochs = 500
+pseudolabel_threshold = 0.95
 
 TRAIN_FILE = "train_labeled.h5"
 UNLABELLED_TRAIN_FILE = "train_unlabeled.h5"
 TEST_FILE = "test.h5"
-SAMPLE_FILE = "sample_90.csv"
+SAMPLE_FILE = "prediction.csv"
 
 TRAIN = pd.read_hdf(TRAIN_FILE)
-x_data = TRAIN.loc[:, 'x1':'x128'].astype(float)
+x_train = TRAIN.loc[:, 'x1':'x128'].astype(float)
 y_data = TRAIN.y.values
-dummy_y = np_utils.to_categorical(y_data, 10)
+y_train = np_utils.to_categorical(y_data, num_output_values)
 
 UNLABELLED_TRAIN = pd.read_hdf(TRAIN_FILE)
 x_unlabelled_data = TRAIN.loc[:, 'x1':'x128'].astype(float)
 
 TEST = pd.read_hdf(TEST_FILE)
 test_id = range(30000, 38000)
-test_x_data = TEST.loc[:, 'x1':'x128'].values
+test_x_data = TEST.loc[:, 'x1':'x128'].astype(float)
 
 ############################################################
 
-# Feature Pre-processing
-pca = PCA()
-x_unlabelled_data = pca.fit_transform(x_unlabelled_data)
-x_data = pca.transform(x_data)
-test_x_data = pca.transform(test_x_data)
+# Pre-processing
+x_train = preprocessing.scale(x_train)
+x_unlabelled_data = preprocessing.scale(x_unlabelled_data)
+test_x_data = preprocessing.scale(test_x_data)
+
+class_weights = utils.class_weight.compute_class_weight('balanced', np.unique(y_data), y_data)
 
 model = Sequential([
     Dense(32, input_shape=(128,), activation='relu'),
-    Dense(20, init='uniform', activation='sigmoid'),
+    Dense(20, kernel_initializer='uniform', activation='sigmoid'),
+    Dense(15, kernel_initializer='uniform', activation='relu'),
     Dense(num_output_values),
     Dropout(0.5),
     Activation('softmax'),
@@ -51,24 +56,26 @@ model.compile(loss='categorical_crossentropy',
               metrics=['accuracy'])
 
 
-model.fit(x_data, dummy_y, epochs=500, verbose=1)
-combined_y_data = y_data
-combined_x_data = x_data
-i = 0
-while i < 20:
-    pred = model.predict(x_unlabelled_data)
-    selectors = [max(x) > 0.90 for x in pred]
-    y_unlabelled_data = list(it.compress(np.argmax(pred, axis=1), selectors))
-    dummy_unlabelled_y = np_utils.to_categorical(y_unlabelled_data, 10)
-    x_filtered_unlabelled_data = list(it.compress(x_unlabelled_data, selectors))
-    print("Number of pseudolabels used: " + str(len(x_filtered_unlabelled_data)))
+model.fit(x_train, y_train, epochs=epochs, verbose=1, class_weight=class_weights)
 
-    if len(x_filtered_unlabelled_data) != 0:
-        print("Here " + str(i))
-        combined_x_data = np.append(x_data, x_filtered_unlabelled_data, axis=0)
-        combined_y_data = np.append(dummy_y, dummy_unlabelled_y, axis=0)
-    model.fit(combined_x_data, combined_y_data, epochs=500, verbose=1)
-    i = i + 1
+i = 0
+while i < 10:
+
+    pred = model.predict(x_unlabelled_data)
+
+    selectors = [max(x) > pseudolabel_threshold for x in pred]
+    y_unlabelled_data = list(it.compress(np.argmax(pred, axis=1), selectors))
+    pseudolabelled_y = np_utils.to_categorical(y_unlabelled_data, num_output_values)
+    pseudolabelled_x = list(it.compress(x_unlabelled_data, selectors))
+    print("Number of pseudolabels used: " + str(len(pseudolabelled_x)))
+    combined_y = np.append(y_data, y_unlabelled_data)
+    class_weights = utils.class_weight.compute_class_weight('balanced', np.unique(combined_y), combined_y)
+
+    if len(pseudolabelled_x) != 0:
+        X = np.append(x_train, pseudolabelled_x, axis=0)
+        y = np.append(y_train, pseudolabelled_y, axis=0)
+        model.fit(X, y, epochs=epochs, verbose=1, class_weight=class_weights)
+    i += 1
 
 prediction = model.predict(test_x_data)
 
