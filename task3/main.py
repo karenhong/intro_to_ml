@@ -44,8 +44,7 @@ model.compile(loss='categorical_crossentropy',
               optimizer='adam',
               metrics=['accuracy'])
 
-
-model.fit(x_data, dummy_y, epochs=250, verbose=1)
+model.fit(x_data, dummy_y, epochs=350, verbose=1)
 
 prediction = model.predict(test_x_data)
 
